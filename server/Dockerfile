@@ -30,15 +30,18 @@ USER root
 ENV HOME /opt/jboss/
 
 RUN INFINISPAN_SHA=$(curl $DISTRIBUTION_URL.sha1); curl -o /tmp/server.zip $DISTRIBUTION_URL && sha1sum /tmp/server.zip | grep $INFINISPAN_SHA \
-    && unzip -q /tmp/server.zip -d $HOME && mv $HOME/infinispan-server-* $HOME/infinispan-server && rm /tmp/server.zip \ 
+    && unzip -q /tmp/server.zip -d $HOME && mv $HOME/infinispan-server-* $HOME/infinispan-server && rm /tmp/server.zip \
     && chown -R 1000.0 /opt/jboss/infinispan-server/ \
     && chmod -R g+rw /opt/jboss/infinispan-server/ \
     && find /opt/jboss/infinispan-server/ -type d -exec chmod g+x {} +
+
+RUN yum install -y dstat python-curses
 
 USER 1000
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin
+COPY measure_infinispan.sh /usr/local/bin
 COPY is_healthy.sh /usr/local/bin
 COPY is_running.sh /usr/local/bin
 # S2I Scripts
@@ -46,5 +49,5 @@ COPY .s2i /usr/local/s2i
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Expose Infinispan server  ports 
+# Expose Infinispan server  ports
 EXPOSE 7600 8080 8181 8888 9990 11211 11222 57600

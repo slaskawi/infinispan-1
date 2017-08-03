@@ -29,7 +29,7 @@ addMgmtUser() {
   local pass=$MGMT_PASS
 
   if is_not_empty $usr && is_not_empty $pass; then
-    $SERVER/bin/add-user.sh -u $usr -p $pass > /dev/null 2>&1 
+    $SERVER/bin/add-user.sh -u $usr -p $pass > /dev/null 2>&1
   else
     usr=$(generate_user_or_password)
     pass=$(generate_user_or_password)
@@ -48,7 +48,7 @@ addMgmtUser() {
     printLine " Dockerfile example:"
     printLine "   ENV MGMT_USER admin"
     printLine "   ENV MGMT_PASS admin"
-    printLine 
+    printLine
     printLine " Kubernetes Example:"
     printLine "   spec:"
     printLine "     containers:"
@@ -60,7 +60,7 @@ addMgmtUser() {
     printLine "           value: admin"
     printLine "         - name: MGMT_PASS"
     printLine "           value: admin"
-    printLine 
+    printLine
     printLine " OpenShift client example:"
     printLine "     oc new-app ... -e MGMT_USER=user -e MGMT_PASS=changeme ..."
     printBorder
@@ -130,7 +130,7 @@ mgmtUserPassRequired()  {
 
  printBorder
  printLine "Specifying management user is required for domain mode"
- printLine  
+ printLine
  printLine "  docker run ... -e \"MGMT_USER=user\" -e \"MGMT_PASS=changeme\" ..."
  printBorder
  exit 1
@@ -141,7 +141,7 @@ checkIfUserExistsForDomainMode()  {
   local usr=$MGMT_USER
   local pass=$MGMT_PASS
 
-  if [ "$RUN_TYPE" != "STANDALONE" ] && ([ "x$usr" = "x" ] || [ "x$pass" = "x" ]); 
+  if [ "$RUN_TYPE" != "STANDALONE" ] && ([ "x$usr" = "x" ] || [ "x$pass" = "x" ]);
    then
        mgmtUserPassRequired
    fi
@@ -195,9 +195,8 @@ RUN_TYPE='STANDALONE'
 CONTAINER_SETTINGS="true"
 SERVER_OPTIONS=""
 SERVER_CONFIGURATION="clustered.xml"
-# Xms should always be set: https://developers.redhat.com/blog/2014/07/15/dude-wheres-my-paas-memory-tuning-javas-footprint-in-openshift-part-1/
-JAVA_OPTS="-Xms64m -Djava.net.preferIPv4Stack=true"
-PERCENT_OF_MEMORY_FOR_MX=70
+JAVA_OPTS="-Djava.net.preferIPv4Stack=true -XX:NativeMemoryTracking=summary"
+PERCENT_OF_MEMORY_FOR_MX=50
 
 for i in "$@"
 do
@@ -215,7 +214,7 @@ case $1 in
     printLine " This script is responsible for setting basic configuration for running "
     printLine " Infinispan Server in Docker"
     printLine " Usage: docker-entrypoint.sh [profile] [options]"
-    printLine 
+    printLine
     printLine " Where [profile] is:"
     printLine "  domain-controller"
     printLine "    Creates managment user and starts a master controller process"
@@ -311,14 +310,16 @@ then
         # https://github.com/fabric8io-images/run-java-sh/blob/master/fish-pepper/run-java-sh/fp-files/java-default-options#L44
         # Use up to 70% for Xmx. In case of any problems, lower this to 50%.
         MX=$(echo "${MEMORY_LIMIT} $PERCENT_OF_MEMORY_FOR_MX 1048576" | awk '{printf "%d\n" , ($1*$2)/(100*$3) + 0.5}')
-        JAVA_OPTS="$JAVA_OPTS -Xmx${MX}m"
+        # Readiness/liveness probes
+        MX=$((${MX}-32))
+        JAVA_OPTS="$JAVA_OPTS -Xmx${MX}m -Xms${MX}m"
         export JAVA_OPTS
       fi
   fi
 
   CPU_LIMIT="$(core_limit)"
   if [ "x$CPU_LIMIT" != x ]; then
-      JAVA_OPTS="$JAVA_OPTS -XX:ParallelGCThreads=$CPU_LIMIT -XX:ConcGCThreads=$CPU_LIMIT -Djava.util.concurrent.ForkJoinPool.common.parallelism=$CPU_LIMIT"         
+      JAVA_OPTS="$JAVA_OPTS -XX:ParallelGCThreads=$CPU_LIMIT -XX:ConcGCThreads=$CPU_LIMIT -Djava.util.concurrent.ForkJoinPool.common.parallelism=$CPU_LIMIT"
       export JAVA_OPTS
   fi
 fi
